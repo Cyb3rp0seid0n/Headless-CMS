@@ -6,6 +6,11 @@ const axiosInstance = axios.create({
   baseURL: 'http://localhost:5000',
 });
 
+const formatDate = (isoString) => {
+  const date = new Date(isoString);
+  return date.toLocaleDateString();
+};
+
 function App() {
   const [entities, setEntities] = useState([]);
   const [name, setName] = useState('');
@@ -255,7 +260,7 @@ function App() {
                   <h3>Name: {obj.name}</h3>
                   {entityAttributes[entity.id]?.Attributes.map((attribute, index) => (
                   <li key={index}>
-                    {attribute.name}: {obj.data[attribute.id].valuedateTime || obj.data[attribute.id].valueText}
+                    {attribute.name}: {obj.data[attribute.id]?.valuedateTime ? formatDate(obj.data[attribute.id].valuedateTime) : obj.data[attribute.id]?.valueText}
                   </li>
                 ))}
                   {/* <button onClick={() => handleUpdateObject(entity.id, object.id)}>Update</button> */}
