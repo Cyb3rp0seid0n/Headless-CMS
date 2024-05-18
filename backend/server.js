@@ -40,19 +40,31 @@ db.query(`CREATE TABLE IF NOT EXISTS attributes (
   console.log('Attributes table created or already exists');
 });
 
+db.query(`CREATE TABLE IF NOT EXISTS entitydata (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  entity_id INT,
+  name VARCHAR(255), 
+  FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+)`, (err) => {
+  if (err) throw err;
+  console.log('Entity Data table created or already exists');
+});
+
 db.query(`CREATE TABLE IF NOT EXISTS data (
   id INT PRIMARY KEY AUTO_INCREMENT,
   entity_id INT,
   attribute_id INT,
+  entitydata_id INT,
   value_datetime DATETIME,
   value_text VARCHAR(255),
   FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
-  FOREIGN KEY (attribute_id) REFERENCES attributes(id) ON DELETE CASCADE
+  FOREIGN KEY (attribute_id) REFERENCES attributes(id) ON DELETE CASCADE,
+  FOREIGN KEY (entitydata_id) REFERENCES entitydata(id) ON DELETE CASCADE
 )`, (err) => {
   if (err) throw err;
   console.log('Data table created or already exists');
 });
-
+ 
 app.post('/api/entities', (req, res) => {
   const { name, attributes } = req.body;
   db.query('INSERT INTO entities (name) VALUES (?)', [name], (err, entityResult) => {
@@ -134,25 +146,40 @@ app.delete('/api/entities/:id', (req, res) => {
   });
 });
 
+app.post('/api/entities/:entityId/entitydata', (req,res) => {
+  const {data} = req.body;
+  const entityId = req.params.entityId;  
+  console.log('data:', data);
+  db.query('INSERT INTO entitydata (entity_id, name) VALUES (?, ?)', [entityId, data.name], (err, entityData) => {
+    if (err) {
+      console.error('Error entering attribute data:', err);
+      res.status(500).json({ error: 'An error occurred during entering attriubte data' });
+      return;
+    }
+    const entitydataId = entityData.insertId;
+    console.log('entity data id:',entitydataId);
+    res.status(201).json({ message: 'Attribute data entered successfully', id: entitydataId });
+  });
+})
+
 //create object
 app.post('/api/entities/:entityId/attributes/:attributeId/data', (req, res) => {
   const {data} = req.body;
   const entityId = req.params.entityId;  
   const attributeId = req.params.attributeId;  
+  const entitydataId = data.entitydataId;
   console.log('data:', data);
   console.log('datetime:', data.value_datetime);
   console.log('value_text:', data.value_text);
+  console.log('entitydataId:', entitydataId);
   const value_datetime = data.value_datetime || null;
   const value_text = data.value_text || null;
-
   //const { value_datetime, value_text } = data;
-
   console.log('Received entityId:', entityId);
   console.log('Received attributeId:', attributeId);
   console.log('Received value_datetime:', value_datetime);
   console.log('Received value_text:', value_text);
-  
-  db.query('INSERT INTO data (entity_id, attribute_id, value_datetime, value_text) VALUES (?, ?, ?, ?)', [entityId, attributeId, value_datetime, value_text], (err, attributeData) => {
+  db.query('INSERT INTO data (entity_id, attribute_id, entitydata_id, value_datetime, value_text) VALUES (?, ?, ?, ?, ?)', [entityId, attributeId, entitydataId, value_datetime, value_text], (err, attributeData) => {
     if (err) {
       console.error('Error entering attribute data:', err);
       res.status(500).json({ error: 'An error occurred during entering attriubte data' });
@@ -162,6 +189,65 @@ app.post('/api/entities/:entityId/attributes/:attributeId/data', (req, res) => {
     res.status(201).json({ message: 'Attribute data entered successfully', id: dataId });
   });
 });
+
+
+app.get('/api/entities/:entityId/entitydata', (req, res) => {
+  const entityId = req.params.entityId;
+  db.query('SELECT * FROM entitydata WHERE entity_id = ?', [entityId], (err, results) => {
+    if (err) {
+      console.error('Error fetching entities:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      const formattedEntityData = results.map(row => ({
+        name: row.name,
+        id: row.id,
+        entityId: row.entity_id
+      }));
+      res.json({ Attributes: formattedEntityData });
+    }
+  });
+});
+
+
+app.get('/api/entities/:entityId/entitydata/:entitydataId/data', (req, res) => {
+  const entityId = req.params.entityId;  
+  const entitydataId = req.params.entitydataId;  
+  db.query('SELECT * FROM data WHERE entity_id = ? AND entitydata_id = ?', [entityId, entitydataId], (err, results) => {
+    if (err) {
+      console.error('Error fetching entities:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      const formattedAttributeData = results.map(row => ({
+        entityId: row.entity_id,
+        attributeId: row.attribute_id,
+        id: row.id,
+        entitydataId: row.entitydata_id,
+        valuedateTime: row.value_datetime,
+        valueText: row.value_text
+      }));
+      console.log('get sql response:', formattedAttributeData);
+      res.json({ Attributes: formattedAttributeData });
+    }
+  });
+});
+
+
+app.delete('/api/entities/:entityId/entitydata/:entitydataId', (req, res) => {
+  const entitydataId = req.params.entitydataId;
+  const entityId = req.params.entityId;
+  db.query('DELETE FROM entitydata WHERE  entity_id = ? AND id = ?', [entityId, entitydataId], (err, result) => {
+    if (err) {
+      console.error('Error deleting entity data:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Entity not found' });
+    } else {
+      res.json({ message: 'Entity data deleted successfully' });
+    }
+  });
+});
+
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

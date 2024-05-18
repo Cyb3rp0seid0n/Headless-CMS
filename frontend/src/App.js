@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import "./App.css";
 
 const axiosInstance = axios.create({
   baseURL: 'http://localhost:5000',
@@ -12,6 +13,7 @@ function App() {
   const [newAttribute, setNewAttribute] = useState('');
   const [dataType, setDataType] = useState('string'); 
   const [entityAttributes, setEntityAttributes] = useState({});
+  const [entityObject, setEntityObjects] = useState({});
 
   useEffect(() => {
     fetchEntities();
@@ -21,6 +23,9 @@ function App() {
     entities.forEach((entity) => getAttributes(entity.id))
   }, [entities]);
 
+  useEffect(() => {
+    entities.forEach((entity) => getEntityObject(entity.id))
+  }, [entities]);
 
   const fetchEntities = () => {
     axiosInstance.get('/api/entities')
@@ -90,25 +95,42 @@ function App() {
     fetchEntities();
   };
 
+
   const handleCreateEntityObject = (id, attributesArray) => {
-    const attributeData = {};
-    attributesArray.forEach((attribute) => {
-      console.log('attribute:', attribute);
-      console.log('entity attributes:', entityAttributes);
-      const inputData = prompt(`Enter data for ${attribute.name} (${attribute.dataType})`);
-      const dataType = attribute.dataType === 'date'? 'value_datetime' : 'value_text';
-      attributeData[dataType] = inputData;
-      console.log('Value of value_text:', inputData);
-    axiosInstance.post(`/api/entities/${id}/attributes/${attribute.id}/data`, { data: attributeData })
+    let entitydataId;
+    const name = prompt(`Enter name of the object`);
+    axiosInstance.post(`/api/entities/${id}/entitydata`, { data: { name } })
       .then(response => {
+        entitydataId = response.data.id;
         console.log('Entity created successfully:', response.data);
-        fetchEntities();
+        console.log('entity data id:', entitydataId);
+  
+        attributesArray.forEach(attribute => {
+          console.log('attribute:', attribute);
+          console.log('entity attributes:', entityAttributes);
+          const inputData = prompt(`Enter data for ${attribute.name} (${attribute.dataType})`);
+          const dataType = attribute.dataType === 'date' ? 'value_datetime' : 'value_text';
+          
+          const attributeData = {
+            [dataType]: inputData,
+            entitydataId: entitydataId, 
+          };
+
+          axiosInstance.post(`/api/entities/${id}/attributes/${attribute.id}/data`, { data: attributeData })
+            .then(response => {
+              console.log('Attribute data created successfully:', response.data);
+              fetchEntities(); 
+            })
+            .catch(error => {
+              console.error('Error creating attribute data:', error);
+            });
+        });
       })
       .catch(error => {
         console.error('Error creating entity:', error);
       });
-    });
   };
+  
   
   
   const getAttributes = async (id) => {
@@ -123,6 +145,58 @@ function App() {
     } catch (error) {
       console.error('Error fetching attributes of entity:', error);
     }
+  };
+
+
+  const getEntityObject = async (id) => {
+    try {
+      const response = await axiosInstance.get(`/api/entities/${id}/entitydata`);
+      const entityData = response.data['Attributes'];
+      console.log('EntityData:', entityData);
+      let dataPromises = [];
+      for (const entityId in entityData) {
+        const entityEntry = entityData[entityId];
+        console.log('Entity Entry:', entityEntry);
+        const entityDataResponse = await axiosInstance.get(`/api/entities/${id}/entitydata/${entityEntry.id}/data`);
+        let dataEntryAttribute = {};
+        entityDataResponse.data.Attributes.forEach(attributeDataEntry => {
+          dataEntryAttribute[attributeDataEntry.attributeId] = attributeDataEntry;
+        });
+        const dataEntry = { id: entityEntry.id, name: entityEntry.name, data: dataEntryAttribute };
+        console.log('dataEntry:', dataEntry);
+        dataPromises.push(dataEntry);
+        // dataPromises.push(
+        //   axiosInstance.get(`/api/entities/${id}/entitydata/${entityEntry.id}/data`)
+        //     .then((dataResponse) => {
+        //       console.log('Data Response:', dataResponse.data);
+        //       const dataEntry = { id: entityEntry.id, name: entityEntry.name, data: dataResponse.data };
+        //       console.log('dataEntry:', dataEntry);
+        //       return dataEntry; 
+        //     })
+        //     .catch((error) => {
+        //       console.error('Error fetching data:', error);
+        //       return null; 
+        //     })
+        // );
+      };
+      console.log('Data Promises:', dataPromises);
+      // const dataArray = await Promise.all(dataPromises);
+      // console.log('Array of Data Entries:', dataArray);
+      // const filteredDataArray = dataArray.filter((entry) => entry !== null);
+      // console.log('All data fetched:', filteredDataArray);
+      setEntityObjects((prevState) => ({
+        ...prevState,
+        [id]: dataPromises,
+      }));
+      console.log('Entity Data:', entityObject);
+    } catch (error) {
+      console.error('Error fetching entity data:', error);
+    }
+  };
+
+  const handleDeleteEntityObject = async (id, entitydataId) => {
+    await axiosInstance.delete(`/api/entities/${id}/entitydata/${entitydataId}`);
+    fetchEntities();
   };
   
 
@@ -173,6 +247,23 @@ function App() {
               <button onClick={() => handleUpdateEntity(entity.id, prompt('Enter updated name'), prompt('Enter updated attributes JSON'))}>Update</button>
               <button onClick={() => handleDeleteEntity(entity.id)}>Delete</button>
             </div>
+            <div>
+            <h3>Objects:</h3>
+            <ul>
+              {entityObject[entity.id]?.map((obj, index) => (
+                <div key={index}>
+                  <h3>Name: {obj.name}</h3>
+                  {entityAttributes[entity.id]?.Attributes.map((attribute, index) => (
+                  <li key={index}>
+                    {attribute.name}: {obj.data[attribute.id].valuedateTime || obj.data[attribute.id].valueText}
+                  </li>
+                ))}
+                  {/* <button onClick={() => handleUpdateObject(entity.id, object.id)}>Update</button> */}
+                  <button onClick={() => handleDeleteEntityObject(entity.id, obj.id)}>Delete</button>
+                </div>
+              ))}
+            </ul>
+          </div>
           </li>
         ))}
       </ul>
