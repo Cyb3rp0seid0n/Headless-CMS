@@ -118,19 +118,6 @@ app.get('/api/entities/:id/attributes', (req, res) => {
   });
 });
 
-app.put('/api/entities/:id', (req, res) => {
-  const entityId = req.params.id;
-  const { attributeId, valueDatetime, valueText } = req.body;
-  db.query('INSERT INTO data (entity_id, attribute_id, value_datetime, value_text) VALUES (?, ?, ?, ?)', [entityId, attributeId, valueDatetime, valueText], (err) => {
-    if (err) {
-      console.error('Error adding data to entity:', err);
-      res.status(500).json({ error: 'Internal server error' });
-    } else {
-      res.json({ message: 'Data added successfully' });
-    }
-  });
-});
-
 
 app.delete('/api/entities/:id', (req, res) => {
   const entityId = req.params.id;
@@ -247,6 +234,45 @@ app.delete('/api/entities/:entityId/entitydata/:entitydataId', (req, res) => {
   });
 });
 
+app.put('/api/entities/:entityId/entitydata/:entitydataId', (req,res) => {
+  const {data} = req.body;
+  const entityId = req.params.entityId;  
+  const entitydataId = req.params.entitydataId;
+  db.query('UPDATE entitydata SET name = ? WHERE entity_id = ? AND id = ?', [data.name, entityId, entitydataId], (err, entityData) => {
+    if (err) {
+      console.error('Error updating attribute data:', err);
+      res.status(500).json({ error: 'An error occurred during updating attriubte data' });
+      return;
+    }
+    const entitydataId = entityData.insertId;
+    res.status(201).json({ message: 'Attribute data updated successfully', id: entitydataId });
+  });
+});
+
+
+app.put('/api/entities/:entityId/entitydata/:entitydataId/attributes/:attributeId/data', (req, res) => {
+  const {data} = req.body;
+  const entityId = req.params.entityId;  
+  console.log('kusu entityId:', entityId);
+  const attributeId = req.params.attributeId;  
+  console.log('kusu attributeId:', attributeId);
+  const entitydataId = req.params.entitydataId;
+  console.log('kusu entitydataId:', entitydataId);
+  const value_datetime = data.value_datetime || null;
+  console.log('kusu value_datetime:', value_datetime);
+  const value_text = data.value_text || null;
+  console.log('kusu value_text:', value_text);
+  db.query('UPDATE data SET value_datetime = ?, value_text = ? WHERE entity_id = ? AND attribute_id = ? AND entitydata_id = ?', [value_datetime, value_text, entityId, attributeId, entitydataId], (err, attributeData) => {
+    if (err) {
+      console.error('Error updating attribute data:', err);
+      res.status(500).json({ error: 'An error occurred during updating attriubte data' });
+      return;
+    }
+    console.log('rossy:', attributeData);
+    const dataId = attributeData.insertId;
+    res.status(201).json({ message: 'Attribute data updated successfully', id: dataId });
+  });
+});
 
 
 app.listen(PORT, () => {

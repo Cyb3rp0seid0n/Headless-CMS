@@ -89,11 +89,6 @@ function App() {
     setAttributes(updatedAttributes);
   };
   
-  const handleUpdateEntity = async (id, updatedName, updatedAttributes) => {
-    const entity = { name: updatedName, attributes: updatedAttributes };
-    await axiosInstance.put(`/api/entities/${id}`, entity);
-    fetchEntities();
-  };
 
   const handleDeleteEntity = async (id) => {
     await axiosInstance.delete(`/api/entities/${id}`);
@@ -204,6 +199,34 @@ function App() {
     fetchEntities();
   };
   
+  
+  const handleUpdateEntityObject = async (id, entitydataId, attributesArray) => {
+    const name = prompt(`Update name of the object`);
+    axiosInstance.put(`/api/entities/${id}/entitydata/${entitydataId}`, { data: { name } })
+      .then(response => {
+        console.log('Entity updated successfully:', response.data);
+        attributesArray.forEach(attribute => {
+          const inputData = prompt(`Update data for ${attribute.name} (${attribute.dataType})`);
+          const dataType = attribute.dataType === 'date' ? 'value_datetime' : 'value_text';
+          const attributeData = {
+            [dataType]: inputData,
+            entitydataId: entitydataId, 
+          };
+          axiosInstance.put(`/api/entities/${id}/entitydata/${entitydataId}/attributes/${attribute.id}/data`, { data: attributeData })
+            .then(response => {
+              console.log('Attribute data updated successfully:', response.data);
+              fetchEntities(); 
+            })
+            .catch(error => {
+              console.error('Error updating attribute data:', error);
+            });
+        });
+      })
+      .catch(error => {
+        console.error('Error updating entity:', error);
+      });
+  };
+
 
   return (
     <div className="App">
@@ -249,7 +272,6 @@ function App() {
                 ))}
               </ul>
               <button onClick={() => handleCreateEntityObject(entity.id, entityAttributes[entity.id]?.Attributes)}>Create Object</button>
-              <button onClick={() => handleUpdateEntity(entity.id, prompt('Enter updated name'), prompt('Enter updated attributes JSON'))}>Update</button>
               <button onClick={() => handleDeleteEntity(entity.id)}>Delete</button>
             </div>
             <div>
@@ -263,7 +285,7 @@ function App() {
                     {attribute.name}: {obj.data[attribute.id]?.valuedateTime ? formatDate(obj.data[attribute.id].valuedateTime) : obj.data[attribute.id]?.valueText}
                   </li>
                 ))}
-                  {/* <button onClick={() => handleUpdateObject(entity.id, object.id)}>Update</button> */}
+                  <button onClick={() => handleUpdateEntityObject(entity.id, obj.id, entityAttributes[entity.id]?.Attributes)}>Update</button>
                   <button onClick={() => handleDeleteEntityObject(entity.id, obj.id)}>Delete</button>
                 </div>
               ))}
