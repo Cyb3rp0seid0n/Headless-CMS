@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import EntityObjectModal from './EntityObjectModal';
+import UpdateEntityObjectModal from './UpdateEntityObjectModal';
 import "./App.css";
 
 const axiosInstance = axios.create({
@@ -19,6 +21,12 @@ function App() {
   const [dataType, setDataType] = useState('string'); 
   const [entityAttributes, setEntityAttributes] = useState({});
   const [entityObject, setEntityObjects] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentEntityId, setCurrentEntityId] = useState(null);
+  const [currentEntityDataId, setCurrentEntityDataId] = useState(null);
+  const [currentAttributes, setCurrentAttributes] = useState([]);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+
 
   useEffect(() => {
     fetchEntities();
@@ -95,43 +103,7 @@ function App() {
     fetchEntities();
   };
 
-
-  const handleCreateEntityObject = (id, attributesArray) => {
-    let entitydataId;
-    const name = prompt(`Enter name of the object`);
-    axiosInstance.post(`/api/entities/${id}/entitydata`, { data: { name } })
-      .then(response => {
-        entitydataId = response.data.id;
-        console.log('Entity created successfully:', response.data);
-        console.log('entity data id:', entitydataId);
-  
-        attributesArray.forEach(attribute => {
-          console.log('attribute:', attribute);
-          console.log('entity attributes:', entityAttributes);
-          const inputData = prompt(`Enter data for ${attribute.name} (${attribute.dataType})`);
-          const dataType = attribute.dataType === 'date' ? 'value_datetime' : 'value_text';
-          
-          const attributeData = {
-            [dataType]: inputData,
-            entitydataId: entitydataId, 
-          };
-
-          axiosInstance.post(`/api/entities/${id}/attributes/${attribute.id}/data`, { data: attributeData })
-            .then(response => {
-              console.log('Attribute data created successfully:', response.data);
-              fetchEntities(); 
-            })
-            .catch(error => {
-              console.error('Error creating attribute data:', error);
-            });
-        });
-      })
-      .catch(error => {
-        console.error('Error creating entity:', error);
-      });
-  };
-  
-  
+ 
   
   const getAttributes = async (id) => {
     try {
@@ -165,25 +137,8 @@ function App() {
         const dataEntry = { id: entityEntry.id, name: entityEntry.name, data: dataEntryAttribute };
         console.log('dataEntry:', dataEntry);
         dataPromises.push(dataEntry);
-        // dataPromises.push(
-        //   axiosInstance.get(`/api/entities/${id}/entitydata/${entityEntry.id}/data`)
-        //     .then((dataResponse) => {
-        //       console.log('Data Response:', dataResponse.data);
-        //       const dataEntry = { id: entityEntry.id, name: entityEntry.name, data: dataResponse.data };
-        //       console.log('dataEntry:', dataEntry);
-        //       return dataEntry; 
-        //     })
-        //     .catch((error) => {
-        //       console.error('Error fetching data:', error);
-        //       return null; 
-        //     })
-        // );
       };
       console.log('Data Promises:', dataPromises);
-      // const dataArray = await Promise.all(dataPromises);
-      // console.log('Array of Data Entries:', dataArray);
-      // const filteredDataArray = dataArray.filter((entry) => entry !== null);
-      // console.log('All data fetched:', filteredDataArray);
       setEntityObjects((prevState) => ({
         ...prevState,
         [id]: dataPromises,
@@ -198,21 +153,61 @@ function App() {
     await axiosInstance.delete(`/api/entities/${id}/entitydata/${entitydataId}`);
     fetchEntities();
   };
-  
-  
-  const handleUpdateEntityObject = async (id, entitydataId, attributesArray) => {
-    const name = prompt(`Update name of the object`);
-    axiosInstance.put(`/api/entities/${id}/entitydata/${entitydataId}`, { data: { name } })
+
+
+  const openCreateObjectModal = (entityId, attributesArray) => {
+    setCurrentEntityId(entityId);
+    setCurrentAttributes(attributesArray);
+    setIsModalOpen(true);
+  };
+
+
+  const handleSaveEntityObject = (name, attributeValues) => {
+    let entitydataId;
+    axiosInstance.post(`/api/entities/${currentEntityId}/entitydata`, { data: { name } })
       .then(response => {
-        console.log('Entity updated successfully:', response.data);
-        attributesArray.forEach(attribute => {
-          const inputData = prompt(`Update data for ${attribute.name} (${attribute.dataType})`);
+        entitydataId = response.data.id;
+        currentAttributes.forEach(attribute => {
           const dataType = attribute.dataType === 'date' ? 'value_datetime' : 'value_text';
           const attributeData = {
-            [dataType]: inputData,
-            entitydataId: entitydataId, 
+            [dataType]: attributeValues[attribute.id],
+            entitydataId: entitydataId,
           };
-          axiosInstance.put(`/api/entities/${id}/entitydata/${entitydataId}/attributes/${attribute.id}/data`, { data: attributeData })
+
+          axiosInstance.post(`/api/entities/${currentEntityId}/attributes/${attribute.id}/data`, { data: attributeData })
+            .then(response => {
+              fetchEntities();
+            })
+            .catch(error => {
+              console.error('Error creating attribute data:', error);
+            });
+        });
+      })
+      .catch(error => {
+        console.error('Error creating entity:', error);
+      });
+  };
+  
+
+  const openUpdateObjectModal = (entityId, entitydataId, attributesArray) => {
+    setCurrentEntityId(entityId);
+    setCurrentEntityDataId(entitydataId);
+    setCurrentAttributes(attributesArray);
+    setIsUpdateModalOpen(true);
+  };
+
+
+  const handleUpdateEntityObject = async (name, attributeValues) => {
+    axiosInstance.put(`/api/entities/${currentEntityId}/entitydata/${currentEntityDataId}`, { data: { name } })
+      .then(response => {
+        console.log('Entity updated successfully:', response.data);
+        currentAttributes.forEach(attribute => {
+          const dataType = attribute.dataType === 'date' ? 'value_datetime' : 'value_text';
+          const attributeData = {
+            [dataType]: attributeValues[attribute.id],
+            entitydataId: currentEntityDataId, 
+          };
+          axiosInstance.put(`/api/entities/${currentEntityId}/entitydata/${currentEntityDataId}/attributes/${attribute.id}/data`, { data: attributeData })
             .then(response => {
               console.log('Attribute data updated successfully:', response.data);
               fetchEntities(); 
@@ -271,7 +266,7 @@ function App() {
                   </li>
                 ))}
               </ul>
-              <button onClick={() => handleCreateEntityObject(entity.id, entityAttributes[entity.id]?.Attributes)}>Create Object</button>
+              <button onClick={() => openCreateObjectModal(entity.id, entityAttributes[entity.id]?.Attributes)}>Create Object</button>
               <button onClick={() => handleDeleteEntity(entity.id)}>Delete</button>
             </div>
             <div>
@@ -285,7 +280,7 @@ function App() {
                     {attribute.name}: {obj.data[attribute.id]?.valuedateTime ? formatDate(obj.data[attribute.id].valuedateTime) : obj.data[attribute.id]?.valueText}
                   </li>
                 ))}
-                  <button onClick={() => handleUpdateEntityObject(entity.id, obj.id, entityAttributes[entity.id]?.Attributes)}>Update</button>
+                  <button onClick={() => openUpdateObjectModal(entity.id, obj.id, entityAttributes[entity.id]?.Attributes)}>Update</button>
                   <button onClick={() => handleDeleteEntityObject(entity.id, obj.id)}>Delete</button>
                 </div>
               ))}
@@ -294,6 +289,18 @@ function App() {
           </li>
         ))}
       </ul>
+      <EntityObjectModal
+        isOpen={isModalOpen}
+        onRequestClose={() => setIsModalOpen(false)}
+        attributes={currentAttributes}
+        onSave={handleSaveEntityObject}
+      />
+      <UpdateEntityObjectModal
+        isOpen={isUpdateModalOpen}
+        onRequestClose={() => setIsUpdateModalOpen(false)}
+        attributes={currentAttributes}
+        onSave={handleUpdateEntityObject}
+      />
     </div>
   );
 }
