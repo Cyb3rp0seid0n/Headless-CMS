@@ -1,17 +1,24 @@
-// UpdateEntityObjectModal.js
+
 import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 
-Modal.setAppElement('#root'); // Bind modal to the app root element
+Modal.setAppElement('#root'); 
 
 const UpdateEntityObjectModal = ({ isOpen, onRequestClose, attributes, onSave }) => {
-  const [name, setName] = useState('');
-  const [attributeValues, setAttributeValues] = useState(
-    attributes.reduce((acc, attr) => {
+    const initialAttributeValues = attributes.reduce((acc, attr) => {
       acc[attr.id] = '';
       return acc;
-    }, {})
-  );
+    }, {});
+    
+
+    const [name, setName] = useState('');
+    const [attributeValues, setAttributeValues] = useState(initialAttributeValues);
+  
+    useEffect(() => {
+        if (!isOpen) {
+          resetState();
+        }
+      }, [isOpen]);
 
   const handleChange = (id, value) => {
     setAttributeValues(prevState => ({
@@ -24,6 +31,12 @@ const UpdateEntityObjectModal = ({ isOpen, onRequestClose, attributes, onSave })
     onSave(name, attributeValues);
     onRequestClose();
   };
+
+  const resetState = () => {
+    setName('');
+    setAttributeValues(initialAttributeValues);
+  };
+
 
   return (
     <Modal isOpen={isOpen} onRequestClose={onRequestClose} contentLabel="Update Entity Object">

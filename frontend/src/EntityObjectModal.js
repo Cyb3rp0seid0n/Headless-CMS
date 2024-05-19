@@ -1,17 +1,23 @@
-// EntityObjectModal.js
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 
-Modal.setAppElement('#root'); // Bind modal to the app root element
+Modal.setAppElement('#root'); 
 
 const EntityObjectModal = ({ isOpen, onRequestClose, attributes, onSave }) => {
+    const initialAttributeValues = attributes.reduce((acc, attr) => {
+        acc[attr.id] = '';
+        return acc;
+      }, {});
+
   const [name, setName] = useState('');
-  const [attributeValues, setAttributeValues] = useState(
-    attributes.reduce((acc, attr) => {
-      acc[attr.id] = '';
-      return acc;
-    }, {})
-  );
+  const [attributeValues, setAttributeValues] = useState(initialAttributeValues);
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetState();
+    }
+  }, [isOpen]);
 
   const handleChange = (id, value) => {
     setAttributeValues(prevState => ({
@@ -23,6 +29,11 @@ const EntityObjectModal = ({ isOpen, onRequestClose, attributes, onSave }) => {
   const handleSave = () => {
     onSave(name, attributeValues);
     onRequestClose();
+  };
+
+  const resetState = () => {
+    setName('');
+    setAttributeValues(initialAttributeValues);
   };
 
   return (
