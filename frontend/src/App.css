@@ -1,11 +1,10 @@
-/* App.css */
 
 :root {
   --primary-color: #094181;
   --secondary-color: #f0f0f0;
   --text-color: #333;
   --button-hover-color: #0056b3;
-  --input-background-color: #E0F7FF; /* Light blue background for input fields */
+  --input-background-color: #E0F7FF; 
   --input-border-color: #ccc;
   --input-focus-border-color: #007BFF;
   --border-radius: 5px;
@@ -63,7 +62,7 @@ body {
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 15px 15px;
-  padding-right: 40px; /* Add space for dropdown arrow */
+  padding-right: 40px; 
 }
 
 .input-group input:hover,

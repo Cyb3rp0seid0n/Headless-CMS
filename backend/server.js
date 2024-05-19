@@ -74,8 +74,6 @@ app.post('/api/entities', (req, res) => {
       return;
     }
     const entityId = entityResult.insertId;
-    console.log(entityId);
-    console.log('Attributes:', attributes);
     for (const attribute of attributes) {
       db.query('INSERT INTO attributes (entity_id, name, data_type) VALUES (?, ?, ?)', [entityId, attribute.name, attribute.dataType], (err, attributeResult) => {
         if (err) {
@@ -136,7 +134,6 @@ app.delete('/api/entities/:id', (req, res) => {
 app.post('/api/entities/:entityId/entitydata', (req,res) => {
   const {data} = req.body;
   const entityId = req.params.entityId;  
-  console.log('data:', data);
   db.query('INSERT INTO entitydata (entity_id, name) VALUES (?, ?)', [entityId, data.name], (err, entityData) => {
     if (err) {
       console.error('Error entering attribute data:', err);
@@ -144,28 +141,18 @@ app.post('/api/entities/:entityId/entitydata', (req,res) => {
       return;
     }
     const entitydataId = entityData.insertId;
-    console.log('entity data id:',entitydataId);
     res.status(201).json({ message: 'Attribute data entered successfully', id: entitydataId });
   });
 })
 
-//create object
+
 app.post('/api/entities/:entityId/attributes/:attributeId/data', (req, res) => {
   const {data} = req.body;
   const entityId = req.params.entityId;  
   const attributeId = req.params.attributeId;  
   const entitydataId = data.entitydataId;
-  console.log('data:', data);
-  console.log('datetime:', data.value_datetime);
-  console.log('value_text:', data.value_text);
-  console.log('entitydataId:', entitydataId);
   const value_datetime = data.value_datetime || null;
   const value_text = data.value_text || null;
-  //const { value_datetime, value_text } = data;
-  console.log('Received entityId:', entityId);
-  console.log('Received attributeId:', attributeId);
-  console.log('Received value_datetime:', value_datetime);
-  console.log('Received value_text:', value_text);
   db.query('INSERT INTO data (entity_id, attribute_id, entitydata_id, value_datetime, value_text) VALUES (?, ?, ?, ?, ?)', [entityId, attributeId, entitydataId, value_datetime, value_text], (err, attributeData) => {
     if (err) {
       console.error('Error entering attribute data:', err);
@@ -212,7 +199,6 @@ app.get('/api/entities/:entityId/entitydata/:entitydataId/data', (req, res) => {
         valuedateTime: row.value_datetime,
         valueText: row.value_text
       }));
-      console.log('get sql response:', formattedAttributeData);
       res.json({ Attributes: formattedAttributeData });
     }
   });
@@ -253,22 +239,16 @@ app.put('/api/entities/:entityId/entitydata/:entitydataId', (req,res) => {
 app.put('/api/entities/:entityId/entitydata/:entitydataId/attributes/:attributeId/data', (req, res) => {
   const {data} = req.body;
   const entityId = req.params.entityId;  
-  console.log('kusu entityId:', entityId);
   const attributeId = req.params.attributeId;  
-  console.log('kusu attributeId:', attributeId);
   const entitydataId = req.params.entitydataId;
-  console.log('kusu entitydataId:', entitydataId);
   const value_datetime = data.value_datetime || null;
-  console.log('kusu value_datetime:', value_datetime);
   const value_text = data.value_text || null;
-  console.log('kusu value_text:', value_text);
   db.query('UPDATE data SET value_datetime = ?, value_text = ? WHERE entity_id = ? AND attribute_id = ? AND entitydata_id = ?', [value_datetime, value_text, entityId, attributeId, entitydataId], (err, attributeData) => {
     if (err) {
       console.error('Error updating attribute data:', err);
       res.status(500).json({ error: 'An error occurred during updating attriubte data' });
       return;
     }
-    console.log('rossy:', attributeData);
     const dataId = attributeData.insertId;
     res.status(201).json({ message: 'Attribute data updated successfully', id: dataId });
   });

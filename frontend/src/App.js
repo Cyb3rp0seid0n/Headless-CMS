@@ -111,8 +111,6 @@ function App() {
   const getAttributes = async (id) => {
     try {
       const response = await axiosInstance.get(`/api/entities/${id}/attributes`);
-      console.log('response:', response);
-      console.log('Attributes Response:', response.data);
       setEntityAttributes(prevState => ({
         ...prevState,
         [id]: response.data
@@ -127,26 +125,21 @@ function App() {
     try {
       const response = await axiosInstance.get(`/api/entities/${id}/entitydata`);
       const entityData = response.data['Attributes'];
-      console.log('EntityData:', entityData);
       let dataPromises = [];
       for (const entityId in entityData) {
         const entityEntry = entityData[entityId];
-        console.log('Entity Entry:', entityEntry);
         const entityDataResponse = await axiosInstance.get(`/api/entities/${id}/entitydata/${entityEntry.id}/data`);
         let dataEntryAttribute = {};
         entityDataResponse.data.Attributes.forEach(attributeDataEntry => {
           dataEntryAttribute[attributeDataEntry.attributeId] = attributeDataEntry;
         });
         const dataEntry = { id: entityEntry.id, name: entityEntry.name, data: dataEntryAttribute };
-        console.log('dataEntry:', dataEntry);
         dataPromises.push(dataEntry);
       };
-      console.log('Data Promises:', dataPromises);
       setEntityObjects((prevState) => ({
         ...prevState,
         [id]: dataPromises,
       }));
-      console.log('Entity Data:', entityObject);
     } catch (error) {
       console.error('Error fetching entity data:', error);
     }
