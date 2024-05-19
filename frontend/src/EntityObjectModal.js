@@ -27,14 +27,16 @@ const EntityObjectModal = ({ isOpen, onRequestClose, attributes, onSave }) => {
 
   return (
     <Modal isOpen={isOpen} onRequestClose={onRequestClose} contentLabel="Create Entity Object">
+      <div className="input-group">
       <h2>Create Entity Object</h2>
-      <div>
-        <label>Name:</label>
+      </div>
+      <div className="input-group">
+        <label>Object Name</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       {attributes.map(attribute => (
-        <div key={attribute.id}>
-          <label>{attribute.name} ({attribute.dataType}):</label>
+        <div key={attribute.id} className="input-group">
+          <label>{attribute.name} ({attribute.dataType})</label>
           <input
             type="text"
             value={attributeValues[attribute.id]}
@@ -42,9 +44,12 @@ const EntityObjectModal = ({ isOpen, onRequestClose, attributes, onSave }) => {
           />
         </div>
       ))}
+      <div className="input-group">
       <button onClick={handleSave}>Save</button>
       <button onClick={onRequestClose}>Cancel</button>
+      </div>
     </Modal>
+    
   );
 };
 

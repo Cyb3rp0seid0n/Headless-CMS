@@ -18,7 +18,7 @@ function App() {
   const [name, setName] = useState('');
   const [attributes, setAttributes] = useState([]);
   const [newAttribute, setNewAttribute] = useState('');
-  const [dataType, setDataType] = useState('string'); 
+  const [dataType, setDataType] = useState('-Select-'); 
   const [entityAttributes, setEntityAttributes] = useState({});
   const [entityObject, setEntityObjects] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +26,7 @@ function App() {
   const [currentEntityDataId, setCurrentEntityDataId] = useState(null);
   const [currentAttributes, setCurrentAttributes] = useState([]);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
 
   useEffect(() => {
@@ -82,6 +83,7 @@ function App() {
         alert('Error making the request.');
       }
     }
+    setIsOpen(false);
     fetchEntities();
   };
   
@@ -89,6 +91,7 @@ function App() {
   const handleAddAttribute = () => {
     setAttributes([...attributes, { name: newAttribute, dataType }]);
     setNewAttribute('');
+    setIsOpen(true);
   };
 
   const handleDeleteAttribute = (index) => {
@@ -225,23 +228,25 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Basic Headless-CMS</h1>
-      <div>
-        <label>Name:</label>
+      <h1>Headless-CMS</h1>
+      <div className="input-group">
+        <label>Entity Name</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
-      <div>
-        <label>Add Attribute:</label>
+      <div className="input-group">
+        <label>Add Attribute</label>
         <input type="text" value={newAttribute} onChange={(e) => setNewAttribute(e.target.value)} />
         <select value={dataType} onChange={(e) => setDataType(e.target.value)}>
+          <option value="select">-select-</option>
           <option value="string">String</option>
           <option value="number">Number</option>
           <option value="date">Date</option>
         </select>
         <button onClick={handleAddAttribute}>Add Attribute</button>
       </div>
+      {isOpen && (
       <div>
-        <h2>Entity Class:</h2>
+        <h2>Entity Structure</h2>
         <ul>
           {attributes.map((attribute, index) => (
             <li key={index}>
@@ -250,15 +255,21 @@ function App() {
             </li>
           ))}
         </ul>
+        <button onClick={handleCreateEntity}>Create Entity</button>
       </div>
-      <button onClick={handleCreateEntity}>Create Entity</button>
+      )}
       <hr />
-      <h2>Entities</h2>
+      {entities.length > 0 && (
+      <div>
+      <h1>Entities</h1>
+      </div>
+      )}
       <ul>
         {entities.map((entity) => (
           <li key={entity.id}>
             <div>
-              {entity.name} - Attributes:
+              <h2> Name: {entity.name} </h2>
+              <h4>Attributes :</h4>
               <ul>
                 {entityAttributes[entity.id]?.Attributes.map((attribute, index) => (
                   <li key={index}>
@@ -269,12 +280,13 @@ function App() {
               <button onClick={() => openCreateObjectModal(entity.id, entityAttributes[entity.id]?.Attributes)}>Create Object</button>
               <button onClick={() => handleDeleteEntity(entity.id)}>Delete</button>
             </div>
+            {entityObject[entity.id] && entityObject[entity.id].length > 0 && (
             <div>
-            <h3>Objects:</h3>
+            <h2>Objects</h2>
             <ul>
               {entityObject[entity.id]?.map((obj, index) => (
                 <div key={index}>
-                  <h3>Name: {obj.name}</h3>
+                  <label>Object Name: {obj.name}</label>
                   {entityAttributes[entity.id]?.Attributes.map((attribute, index) => (
                   <li key={index}>
                     {attribute.name}: {obj.data[attribute.id]?.valuedateTime ? formatDate(obj.data[attribute.id].valuedateTime) : obj.data[attribute.id]?.valueText}
@@ -286,6 +298,7 @@ function App() {
               ))}
             </ul>
           </div>
+          )}
           </li>
         ))}
       </ul>
