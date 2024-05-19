@@ -5,7 +5,7 @@ import UpdateEntityObjectModal from './UpdateEntityObjectModal';
 import "./App.css";
 
 const axiosInstance = axios.create({
-  baseURL: 'https://headless-cms-backend-two.vercel.app/',
+  baseURL: 'http://localhost:5000',
 });
 
 const formatDate = (isoString) => {
